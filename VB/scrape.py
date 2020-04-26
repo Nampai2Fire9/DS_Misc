@@ -40,9 +40,38 @@ def text_match_2list(regex, text_string):
     matches = new_re.finditer(text_string)
     match_ranges = []
     for match in matches:
-        print(match.span()) 
         match_ranges.append(match.span())
-        start_item = match.span()[0]
-        end_item = match.span()[1]
-        text_string[start_item:end_item]
     return match_ranges
+
+def text_match_str2list(regex, text_string):
+    new_re = re.compile(regex)
+    matches = new_re.finditer(text_string)
+    match_list = []
+    for match in matches:
+        start_loc = match.span()[0]
+        end_loc = match.span()[1]
+        match_list.append(text_string[start_loc:end_loc])
+    return match_list
+
+
+# Turn list of locations to string tests. Assumes bounded region (to grab last item)
+def list_betweenloc_to_string_bounded(location_list, text_string, end_location):
+    str_list = []
+    for i in np.arange(0, len(location_list)-1):  # process everything but last section
+        start_loc = location_list[i][1]
+        end_loc = location_list[i+1][0]-1
+        str_list.append(text_string[start_loc:end_loc])
+    last_start_loc = location_list[len(location_list)-1][1]
+    str_list.append(text_string[last_start_loc:end_location])
+    return str_list
+
+# Clean up items from list of strings
+    # remove (i) new lines (ii) semicolons, (iii) leading whitespace 
+def str_item_cleanup(string_list):
+    string_list2 = []
+    for item in string_list:
+        str1 = item.replace('\n', '')
+        str1 = str1.replace(';','')
+        str1 = str1.lstrip()     # remove leading whitespace 
+        string_list2.append(str1)
+    return string_list2
