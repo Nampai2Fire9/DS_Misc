@@ -43,6 +43,8 @@ def text_match_2list(regex, text_string):
         match_ranges.append(match.span())
     return match_ranges
 
+
+    # same as text_match_2list except returns string values using locations. 
 def text_match_str2list(regex, text_string):
     new_re = re.compile(regex)
     matches = new_re.finditer(text_string)
