@@ -57,6 +57,7 @@ def text_match_str2list(regex, text_string):
 
 
 # Turn list of locations to string tests. Assumes bounded region (to grab last item)
+    # Output: List of text strings between bullet points
 def list_betweenloc_to_string_bounded(location_list, text_string, end_location):
     str_list = []
     for i in np.arange(0, len(location_list)-1):  # process everything but last section
@@ -66,6 +67,29 @@ def list_betweenloc_to_string_bounded(location_list, text_string, end_location):
     last_start_loc = location_list[len(location_list)-1][1]
     str_list.append(text_string[last_start_loc:end_location])
     return str_list
+    
+    # Process list between locations / keep bullets:  similar to list_betweenloc_to_string_bounded but keeps bullets 
+        # output: list of strings w/ original bullets (roman numerals, letters, etc.
+def list_betweenloc_to_string_bounded_keepbullet(location_list, text_string, end_location):
+    str_list = []
+    for i in np.arange(0, len(location_list)-1):  # process everything but last section
+        start_loc = location_list[i][0]
+        end_loc = location_list[i+1][0]-1
+        str_list.append(text_string[start_loc:end_loc])
+    last_start_loc = location_list[len(location_list)-1][0]
+    str_list.append(text_string[last_start_loc:end_location])
+    return str_list
+
+    # Process regex_list/Keepb bullets for text_string: locations dictated by regex_list
+       # Input text string, regex_list and end_location
+        # Output: bullet points with bullets
+def list_btn_loc_regexlist_keepbullet(text_string, end_location, regex_list):
+    match_list = [re.search(x,text_string) for x in regex_list]
+    first_none = [i for i, item in enumerate(match_list) if item is None][0]   # first record w/ None. remove list from 'None'
+    match_list = match_list[0:first_none]            # remove list from 'None'
+    match_list = [x.span() for x in match_list]
+    test_str = list_betweenloc_to_string_bounded_keepbullet(match_list, text_string, len(text_string))
+    return test_str
 
 # Clean up items from list of strings
     # remove (i) new lines (ii) semicolons, (iii) leading whitespace 
