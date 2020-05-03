@@ -45,6 +45,8 @@ def text_match_2list(regex, text_string):
 
 
     # same as text_match_2list except returns string values using locations. 
+        # Input: takes one regex and string of text
+        # output: returns items in string matching regex
 def text_match_str2list(regex, text_string):
     new_re = re.compile(regex)
     matches = new_re.finditer(text_string)
@@ -57,6 +59,7 @@ def text_match_str2list(regex, text_string):
 
 
 # Turn list of locations to string tests. Assumes bounded region (to grab last item)
+    # Input: list of locations, end_location, and text string
     # Output: List of text strings between bullet points
 def list_betweenloc_to_string_bounded(location_list, text_string, end_location):
     str_list = []
@@ -69,6 +72,7 @@ def list_betweenloc_to_string_bounded(location_list, text_string, end_location):
     return str_list
     
     # Process list between locations / keep bullets:  similar to list_betweenloc_to_string_bounded but keeps bullets 
+        # Input:  list of locations, end_location, and text string
         # output: list of strings w/ original bullets (roman numerals, letters, etc.
 def list_betweenloc_to_string_bounded_keepbullet(location_list, text_string, end_location):
     str_list = []
