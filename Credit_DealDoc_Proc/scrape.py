@@ -11,6 +11,7 @@ import pdfplumber
 import numpy as np
 import pandas as pd 
 import json
+import tabula
 
 #---- Extract pages
     # Extract pages into list: one page per list litem: 
@@ -94,6 +95,38 @@ def list_btn_loc_regexlist_keepbullet(text_string, end_location, regex_list):
     match_list = [x.span() for x in match_list]
     test_str = list_betweenloc_to_string_bounded_keepbullet(match_list, text_string, len(text_string))
     return test_str
+
+#-------- Table Processing  ------------- 
+    # Shift columns names to first row and create new table. 
+      # Tabula often makes the first row the title. 
+        # Input: imported dataframe, new column names
+        # Output: dataframe with the column names shifted into first row and actual column names set
+def shift_colnames_1strow(df, col_names):
+    df1 = df.copy() 
+    df1.columns = col_names
+    df1.loc[-1] = list(df.columns)   
+    df1.index = df1.index + 1 
+    df1 = df1.sort_index()
+    return df1
+
+    # Remove starting rows and rename (opposite problem to shift_colnames_1strow where row turns into column headers)
+        # Input dataframe, new column names, and the number of rows to remove
+        # output: new dataframe with columns names and rows removed. 
+def remrows_table_rename(df, col_names, no_rows_remove):
+    df1 = df.copy()
+    df1.columns = col_names
+    df1 = df1.iloc[4:len(df1)].reset_index(drop=True)
+    return df1
+
+    # split out field with lists
+        # DF, field with lists, new column names, and value to split on (ex. ' ')
+def split_lists_newdf(df, field, col_names, split_val):
+    df1 = pd.DataFrame([x.split(split_val) for x in df[field]])
+    df1.columns = col_names
+    df1 = pd.concat([df, df1], axis=1)
+    return df1
+
+#------ String Cleanup 
 
 # Clean up items from list of strings
     # remove (i) new lines (ii) semicolons, (iii) leading whitespace 
