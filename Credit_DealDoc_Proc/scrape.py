@@ -87,7 +87,7 @@ def list_betweenloc_to_string_bounded_keepbullet(location_list, text_string, end
 
     # Process regex_list/Keepb bullets for text_string: locations dictated by regex_list
        # Input text string, regex_list and end_location
-        # Output: bullet points with bullets
+        # Output: list of string with bullet points and bullets included
 def list_btn_loc_regexlist_keepbullet(text_string, end_location, regex_list):
     match_list = [re.search(x,text_string) for x in regex_list]
     first_none = [i for i, item in enumerate(match_list) if item is None][0]   # first record w/ None. remove list from 'None'
@@ -102,7 +102,7 @@ def list_btn_loc_regexlist_keepbullet(text_string, end_location, regex_list):
         # Input: imported dataframe, new column names
         # Output: dataframe with the column names shifted into first row and actual column names set
 def shift_colnames_1strow(df, col_names):
-    df1 = df.copy() 
+    df1 = df
     df1.columns = col_names
     df1.loc[-1] = list(df.columns)   
     df1.index = df1.index + 1 
@@ -113,9 +113,9 @@ def shift_colnames_1strow(df, col_names):
         # Input dataframe, new column names, and the number of rows to remove
         # output: new dataframe with columns names and rows removed. 
 def remrows_table_rename(df, col_names, no_rows_remove):
-    df1 = df.copy()
+    df1 = df
     df1.columns = col_names
-    df1 = df1.iloc[4:len(df1)].reset_index(drop=True)
+    df1 = df1.iloc[no_rows_remove:len(df1)].reset_index(drop=True)
     return df1
 
     # split out field with lists
@@ -135,6 +135,15 @@ def str_item_cleanup(string_list):
     for item in string_list:
         str1 = item.replace('\n', '')
         str1 = str1.replace(';','')
-        str1 = str1.lstrip()     # remove leading whitespace 
+        # str1 = str1.lstrip()     # remove leading whitespace 
+        str1 = str1.strip()        # remove trailing and leading whitespace 
         string_list2.append(str1)
     return string_list2
+
+# Clean up function with list of items to remove 
+def str_rmvlist_cleanup(string_list, rmv_list):
+    str_list = string_list
+    for rmv in rmv_list:
+        str_list = [x.replace(rmv, '') for x in str_list]
+    str_list = [x.strip() for x in str_list]
+    return str_list
