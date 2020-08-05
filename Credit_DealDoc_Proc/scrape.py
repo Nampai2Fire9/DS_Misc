@@ -15,8 +15,8 @@ import tabula
 
 #---- Extract pages
     # Extract pages into list: one page per list litem
-    # Note pdfplumber treats page 1 as page 0, and last page X, as page x+1
-        # Hence:To pull page 1 to page x, start_page = 0, end_page = x+1
+    # Note pdfplumber treats page 1 as page 0, and last page X
+        # Hence:To pull page 1 to page 10, start_page = 0, end_page = 10
 def pdf_extract_pages(file_name, start_page, end_page):
     text_list = [] 
     with pdfplumber.open(file_name) as pdf:
@@ -60,6 +60,14 @@ def pop_tbldict(tbl_insert, text_w_string, regex):
     tbl_dict['opening_sec'] = pullsubstr_beg_regex(regex,text_w_string)
     tbl_dict['table'] = tbl_insert
     return tbl_dict
+
+# populate existing dictionary with list of keys
+    # Input: dict to populate (pop_dict), key names:
+    # items: bullet_items
+def pop_dictbullets(section_value, bullet_list, bullet_items, pop_dict):
+    for i in np.arange(len(bullet_items)):
+        x_str = section_value + '(' + bullet_list[i] + ')'
+        pop_dict[x_str] = bullet_items[i]
 
     # Load multiple matches into list 
         # Input (i) regular expression (ii) text string 
@@ -124,7 +132,7 @@ def list_btn_loc_regexlist_keepbullet(text_string, end_location, regex_list):
     test_str = list_betweenloc_to_string_bounded_keepbullet(match_list, text_string, end_location)
     return test_str
 
-    # Return list between locations: similar to list_betweenloc_to_string_bounded_keepbullet, but is input is only start of a range for each match instead of the full span
+    # Return list between locations: similar to list_betweenloc_to_string_bounded_keepbullet, but input is only start of a range for each match instead of the full span
 def list_betweenloc_to_string_bounded_keepbullet_order(location_list, text_string, end_location):
     str_list = []
     for i in np.arange(0, len(location_list)-1):  # process everything but last section. Note np.arange(0 ,x) returns numbers 0 to x-1
@@ -140,7 +148,7 @@ def list_betweenloc_to_string_bounded_keepbullet_order(location_list, text_strin
         # input:text string, end location and regex_list
         # Output: uses 'list_betweenloc_to_string_bounded_keepbullet_order' to return list of strings
 def list_btn_loc_regexlist_keepbullet2_order(text_string, end_location, regex_list):
-    match_list = []  # caputure initial matches: returns a list of listss 
+    match_list = []  # capture initial matches: returns a list of listss 
     for i, item in enumerate(regex_list):
         new_re = re.compile(item)
         matches = new_re.finditer(text_string)
@@ -161,7 +169,8 @@ def list_btn_loc_regexlist_keepbullet2_order(text_string, end_location, regex_li
         for x in x_list:
             if x > match_list2[i]:
                 x_gt_prev.append(x)
-        match_list2.append(x_gt_prev[0])    
+        if x_gt_prev != []: 
+            match_list2.append(x_gt_prev[0])    
     match_str = list_betweenloc_to_string_bounded_keepbullet_order(match_list2, text_string, end_location)
     return match_str
 
@@ -187,8 +196,9 @@ def remrows_table_rename(df, col_names, no_rows_remove):
     df1 = df1.iloc[no_rows_remove:len(df1)].reset_index(drop=True)
     return df1
 
-    # split out field with lists
-        # DF, field with lists, new column names, and value to split on (ex. ' ')
+    # split out field with lists and add back into df
+        # Input  DF, field with lists, new column names, and value to split on (ex. ' ')
+        # Output DF with old DF + new columns
 def split_lists_newdf(df, field, col_names, split_val):
     df1 = pd.DataFrame([x.split(split_val) for x in df[field]])
     df1.columns = col_names
@@ -216,3 +226,142 @@ def str_rmvlist_cleanup(string_list, rmv_list):
         str_list = [x.replace(rmv, '') for x in str_list]
     str_list = [x.strip() for x in str_list]
     return str_list
+
+#--------------------------------- Indenture level Processing  ------------------ 
+    #------------ Combine multiple functions into one
+    
+    # Create function that processes definitions section of indenture
+        # Input: filename, start and end pages for definitions, regex for definition itself 
+        # Output: DataFrame with definitions, page numbers for each definition and initial roman/letter bullets broken out. 
+def def_1st_tbl_indent(file_name, start_page, end_page, regex, roman_regex_list, letter_regex_list):
+    doc_pages = pdf_extract_pages(file_name, start_page, end_page)
+    doc_str = combine_strings(doc_pages) 
+    def_locs = text_match_2list(regex, doc_str)
+    def_descr = list_betweenloc_to_string_bounded(def_locs, doc_str, len(doc_str))
+    df_defs = pd.DataFrame([doc_str[x[0]+1:x[1]-2] for x in def_locs])
+    df_defs['description'] = def_descr
+    df_defs.columns = ['def_name','def_description']
+    
+    # add page numbers
+    def_names = []
+    for i,page in enumerate(doc_pages):
+        page_num = i + 10
+        ranges = text_match_2list(regex, page)
+        for range in ranges:
+            def_names.append([page[range[0]+1:range[1]-2], page_num])
+    def_name_pages = pd.DataFrame(def_names, columns=['def_name','page_num'])
+    df_defs = pd.merge(df_defs, def_name_pages, on='def_name', how='left')
+    
+    # add roman and letter bullet points 
+    regex_roman = roman_regex_list[0]
+    regex_letter = letter_regex_list[0] 
+        
+    match_reg = [re.search(regex_roman, x) for x in df_defs['def_description']]
+    roman_bullet_flag = [x.span()[0] if x is not None else 0 for x in match_reg]
+    df_defs['roman_bullets_loc'] = roman_bullet_flag
+    
+    match_reg = [re.search(regex_letter, x) for x in df_defs['def_description']]
+    letter_bullet_flag = [x.span()[0] if x is not None else 0 for x in match_reg]
+    df_defs['letter_bullets_loc'] = letter_bullet_flag
+    return df_defs
+
+# function to clean up names in df_defs: remove double spaces and pdf-style quotes
+def df_def_cleanup(df_defs):
+    df = df_defs.copy()
+    def_name = [x.replace('  ', ' ') for x in df_defs['def_name']]
+    def_name = [x.replace("”", '') for x in def_name]
+    def_name = [x.replace("“", '') for x in def_name]
+    def_name =  [x.replace("’", "'") for x in def_name] 
+    def_name = [x.replace('"', '') for x in def_name]
+    df['def_name'] = def_name
+    return df
+
+    # Function for splitting out the first letter  or roman bullets and adding back into table 
+        # Input: DF with definitions, regex lists
+        # Output: DF with definitions and first layer bullets split out in separate column of lists
+def def_first_bullet_combine(df_defs, regex_list1, regex_list2):
+    # Process roman bullets
+    df_defs_sub1 =df_defs[(
+                        (df_defs.roman_bullets_loc < df_defs.letter_bullets_loc) & 
+                         (df_defs.roman_bullets_loc != 0)
+                        ) | 
+                     ( 
+                        (df_defs.roman_bullets_loc !=0) & 
+                          (df_defs.letter_bullets_loc == 0)
+                         )
+                    ]
+    rom_def_strings = [list_btn_loc_regexlist_keepbullet2_order(x,len(x),regex_list1) for x in df_defs_sub1['def_description']]
+    df_defs_sub1['roman_bullets'] = rom_def_strings 
+    
+    # Process letter bullets
+    df_defs_sub2 =df_defs[(
+                        (df_defs.roman_bullets_loc > df_defs.letter_bullets_loc) & 
+                         (df_defs.letter_bullets_loc != 0)
+                        ) | 
+                     ( 
+                        (df_defs.letter_bullets_loc !=0) & 
+                          (df_defs.roman_bullets_loc == 0)
+                         )
+                    ]
+    
+    lowalpha_def_strings = [list_btn_loc_regexlist_keepbullet(x,len(x),regex_list2) for x in df_defs_sub2['def_description']]
+    df_defs_sub2['alpha_bullets'] = lowalpha_def_strings
+    
+    # Combine table back to original definition table (df_defs)
+    df_def_comb = pd.merge(pd.merge(df_defs, df_defs_sub1[['def_name','roman_bullets']], on='def_name', how='left'), 
+                                df_defs_sub2[['def_name','alpha_bullets']], 
+                            on='def_name',how='left')
+    return df_def_comb
+    
+
+    # Convert definition dataframe with first bullet layer to dictionary 
+        # Input: dataframe with definitions and first bullet layer broken out 
+        # Output: Dictionary with definitions, bullets, and page numbers 
+def def_pop_firstdict(df_def_comb):
+    def_dict = {} 
+    for i, item in enumerate(df_def_comb['def_description']):
+        key_name = df_def_comb.iloc[i]['def_name']
+        key_vals = {}   # holds definition value
+        sub_dict = {}   # holds items within definition value
+        roman_loc1 = df_def_comb.iloc[i]['roman_bullets_loc']  # will re-use for rest of loop 
+        letter_loc1 = df_def_comb.iloc[i]['letter_bullets_loc']
+        key_vals['page_num'] = df_def_comb.iloc[i]['page_num']
+        key_vals['systemTerm'] = df_def_comb.iloc[i]['systemTerm']
+        key_vals['text'] = item
+        
+        # Definitions WITHOUT bullet points 
+        if( (df_def_comb.iloc[i]['roman_bullets_loc']==0) &
+               (df_def_comb.iloc[i]['letter_bullets_loc']==0) ):
+            key_vals['def_values'] = item
+
+        # Definitions with bullets: lowercase Roman comes first. 
+        elif( ( 
+                (df_def_comb.iloc[i]['roman_bullets_loc'] < df_def_comb.iloc[i]['letter_bullets_loc'] ) & 
+                    (df_def_comb.iloc[i]['roman_bullets_loc'] != 0 )
+                ) | 
+              ( 
+                (df_def_comb.iloc[i]['roman_bullets_loc'] != 0) & 
+                  (df_def_comb.iloc[i]['letter_bullets_loc'] == 0)
+                )
+            ):
+                sub_dict['opening_sec'] = df_def_comb.iloc[i]['def_description'][0:roman_loc1]
+                sub_dict['bullet_level1'] = df_def_comb.iloc[i]['roman_bullets']
+                key_vals['def_values'] = sub_dict
+
+        # Definitions with bullets: lowercase Roman comes first. 
+        elif( ( 
+                (df_def_comb.iloc[i]['letter_bullets_loc'] < df_def_comb.iloc[i]['roman_bullets_loc'] ) & 
+                    (df_def_comb.iloc[i]['letter_bullets_loc'] != 0 )
+                ) | 
+              ( 
+                (df_def_comb.iloc[i]['letter_bullets_loc'] != 0) & 
+                  (df_def_comb.iloc[i]['roman_bullets_loc'] == 0)
+                )
+            ):
+                sub_dict['opening_sec'] = df_def_comb.iloc[i]['def_description'][0:letter_loc1]
+                sub_dict['bullet_level1'] = df_def_comb.iloc[i]['alpha_bullets']
+                key_vals['def_values'] = sub_dict
+
+        else: def_dict[key_name] = 5000
+        def_dict[key_name] = key_vals
+    return def_dict
