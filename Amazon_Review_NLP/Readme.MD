@@ -42,7 +42,7 @@ For positive reviews, P(positive_review | word1, word2, …, wordn) looks like t
 
 If the sum -133.768 is greater than P(negative_review | word1, word2,…, wordn), then we classify the review as positive. 
 
-In principle this is how classification is done in Naïve Bayes. However, a number of alarm bells are probably going off at this point. The first is we were able to break the joint conditional probability of the pool of words into individual conditional probabilities for each word. This means each word is considered inddpendent, but we know this cannot be the case since they came from the same sentence.  
+In principle this is how classification is done in Naïve Bayes. However, a number of alarm bells are probably going off at this point. The first is we were able to break the joint conditional probability of the pool of words into individual conditional probabilities for each word. This means each word is considered independent, but we know this cannot be the case since they came from the same sentence.  
 
 We are able to get away with this kind of misconduct because we only care which “naïve”  probability is larger between the positive and negative review, not how they are calculated. There are also a number of other issues that spring to mind. For example:  
 
